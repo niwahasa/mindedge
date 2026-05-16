@@ -34,9 +34,12 @@ export function getGreetingTime(): string {
 
 export function getTradingSession(): { name: string; color: string } {
   const hour = new Date().getUTCHours();
-  if (hour >= 0 && hour < 8) return { name: 'ASIAN SESSION', color: '#ffd166' };
-  if (hour >= 8 && hour < 16) return { name: 'LONDON SESSION', color: '#00e5a0' };
-  if (hour >= 16 && hour < 21) return { name: 'NEW YORK SESSION', color: '#00b8ff' };
+  
+  if (hour >= 13 && hour < 16) return { name: 'NY/LONDON OVERLAP', color: '#ffb800' };
+  if (hour >= 16 && hour < 22) return { name: 'NEW YORK SESSION', color: '#00b8ff' };
+  if (hour >= 22 || hour < 8) return { name: 'ASIAN SESSION', color: '#ffd166' };
+  if (hour >= 8 && hour < 13) return { name: 'LONDON SESSION', color: '#00e5a0' };
+  
   return { name: 'MARKET CLOSED', color: '#4a5a6a' };
 }
 
