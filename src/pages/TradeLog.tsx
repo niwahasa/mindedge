@@ -2,12 +2,11 @@ import { useState, useMemo } from 'react';
 import { Plus, X, ChevronUp, ChevronDown, Pencil, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTradeStore } from '@/stores/tradeStore';
 import { useAnalyticsStore } from '@/stores/analyticsStore';
-import { formatDate, generateId } from '@/utils/helpers';
+import { formatDate } from '@/utils/helpers';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Paywall from '@/components/ui/Paywall';
 import type { Trade } from '@/types';
-import { useAuthStore } from '@/stores/authStore';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 
 const PAIRS = ['XAUUSD', 'EURUSD', 'GBPUSD', 'USDJPY', 'GBPJPY', 'NZDUSD', 'AUDUSD', 'USDCAD'];
@@ -31,7 +30,6 @@ export default function TradeLog() {
   const deleteTrade = useTradeStore((s) => s.deleteTrade);
   const getFilteredTrades = useTradeStore((s) => s.getFilteredTrades);
   const recalculateStats = useAnalyticsStore((s) => s.recalculateStats);
-  const user = useAuthStore((s) => s.user);
   const { canAddTrade } = usePlanLimits();
 
   // Reset filters on mount so stale session filters don't hide trades

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, Sparkles, Zap, ShieldCheck, BarChart3, Brain, Ticket } from 'lucide-react';
+import { Check, Sparkles, Zap, ShieldCheck, BarChart3, Ticket } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/lib/supabase';
 import Card from '@/components/ui/Card';

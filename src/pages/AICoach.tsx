@@ -3,7 +3,6 @@ import { Sparkles, Send, RotateCcw, TrendingUp, Clock, Activity } from 'lucide-r
 import { useAnalyticsStore } from '@/stores/analyticsStore';
 import { useTradeStore } from '@/stores/tradeStore';
 import { calculateStats } from '@/utils/helpers';
-import { useAuthStore } from '@/stores/authStore';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 import Paywall from '@/components/ui/Paywall';
 
@@ -24,7 +23,7 @@ export default function AICoach() {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const stats = calculateStats(trades);
-  const { isPremium, canUseCoach } = usePlanLimits();
+  const { isPremium } = usePlanLimits();
 
   if (!isPremium) {
     return (
