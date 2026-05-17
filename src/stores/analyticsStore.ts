@@ -39,6 +39,14 @@ const defaultRules: SessionRules = {
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
 function getGeminiKey(): string | null {
+  const authUser = useAuthStore.getState().user;
+  if (authUser?.geminiApiKey) {
+    return authUser.geminiApiKey;
+  }
+  if (authUser?.id) {
+    const userKey = localStorage.getItem(`mindedge_gemini_key_${authUser.id}`);
+    if (userKey) return userKey;
+  }
   return localStorage.getItem('mindedge_gemini_key');
 }
 

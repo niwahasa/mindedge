@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Settings as SettingsIcon, User, Shield, ClipboardCheck, Crown, Download, Check, ChevronDown, X, GripVertical } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useAnalyticsStore } from '@/stores/analyticsStore';
@@ -256,8 +256,17 @@ function PlanSection() {
 function DataExportSection() {
   const trades = useTradeStore((s) => s.trades);
   const user = useAuthStore((s) => s.user);
-  const [apiKey, setApiKey] = useState(localStorage.getItem('mindedge_gemini_key') || '');
+  const updateProfile = useAuthStore((s) => s.updateProfile);
+  const [apiKey, setApiKey] = useState(user?.geminiApiKey || localStorage.getItem(`mindedge_gemini_key_${user?.id}`) || localStorage.getItem('mindedge_gemini_key') || '');
   const [saved, setSaved] = useState(false);
+
+  // Sync state with user profile updates
+  useEffect(() => {
+    if (user) {
+      const currentKey = user.geminiApiKey || localStorage.getItem(`mindedge_gemini_key_${user.id}`) || localStorage.getItem('mindedge_gemini_key') || '';
+      setApiKey(currentKey);
+    }
+  }, [user]);
 
   const handleExport = () => {
     const csv = exportTradesToCsv(trades);
@@ -270,8 +279,8 @@ function DataExportSection() {
     URL.revokeObjectURL(url);
   };
 
-  const handleSaveKey = () => {
-    localStorage.setItem('mindedge_gemini_key', apiKey);
+  const handleSaveKey = async () => {
+    await updateProfile({ geminiApiKey: apiKey });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };

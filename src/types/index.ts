@@ -29,6 +29,7 @@ export interface User {
   lastActive: string;
   profilePic?: string | null;
   createdAt: string;
+  geminiApiKey?: string | null;
 }
 
 export interface Pattern {

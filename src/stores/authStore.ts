@@ -85,6 +85,11 @@ export const useAuthStore = create<AuthState>()(
             if (sqlUser) {
               // Map SQL columns → User type (SQL has 'streak', type has 'journalStreak')
               const now = new Date().toISOString();
+              const savedKey = localStorage.getItem(`mindedge_gemini_key_${sqlUser.id}`) || get().user?.geminiApiKey || localStorage.getItem('mindedge_gemini_key') || null;
+              if (savedKey) {
+                localStorage.setItem(`mindedge_gemini_key_${sqlUser.id}`, savedKey);
+                localStorage.setItem('mindedge_gemini_key', savedKey);
+              }
               const user: User = {
                 id: sqlUser.id,
                 email: sqlUser.email,
@@ -96,6 +101,7 @@ export const useAuthStore = create<AuthState>()(
                 lastActive: now,
                 createdAt: sqlUser.created_at || now,
                 profilePic: get().user?.profilePic || null,
+                geminiApiKey: savedKey,
               };
               syncAndScopeAnalyticsStore(user.id);
               set({ user, isAuthenticated: true });
@@ -191,6 +197,11 @@ export const useAuthStore = create<AuthState>()(
                 });
               }
 
+              const savedKey = supaUser.user_metadata?.gemini_api_key || localStorage.getItem(`mindedge_gemini_key_${sqlUser.id || supaUser.id}`) || get().user?.geminiApiKey || localStorage.getItem('mindedge_gemini_key') || null;
+              if (savedKey) {
+                localStorage.setItem(`mindedge_gemini_key_${sqlUser.id || supaUser.id}`, savedKey);
+                localStorage.setItem('mindedge_gemini_key', savedKey);
+              }
               const user: User = {
                 id: sqlUser.id || supaUser.id,
                 email: sqlUser.email || supaUser.email,
@@ -202,6 +213,7 @@ export const useAuthStore = create<AuthState>()(
                 lastActive: now,
                 createdAt: sqlUser.created_at || now,
                 profilePic: supaUser.user_metadata?.avatar_url || get().user?.profilePic || null,
+                geminiApiKey: savedKey,
               };
 
               syncAndScopeAnalyticsStore(user.id);
@@ -304,6 +316,21 @@ export const useAuthStore = create<AuthState>()(
             });
           } catch {
             // Ignore for password login users who have no active Supabase Auth session
+          }
+        }
+
+        // If geminiApiKey is updated, sync to local storage & Supabase Auth metadata
+        if (data.geminiApiKey !== undefined) {
+          if (user.id) {
+            localStorage.setItem(`mindedge_gemini_key_${user.id}`, data.geminiApiKey || '');
+          }
+          localStorage.setItem('mindedge_gemini_key', data.geminiApiKey || '');
+          try {
+            await supabase.auth.updateUser({
+              data: { gemini_api_key: data.geminiApiKey }
+            });
+          } catch {
+            // Ignore for password login users
           }
         }
       },
