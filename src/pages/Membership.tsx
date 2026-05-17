@@ -6,7 +6,7 @@ import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import { toast } from 'sonner';
 
-const STRIPE_PAYMENT_LINK = import.meta.env.VITE_STRIPE_PAYMENT_LINK as string;
+const STRIPE_PAYMENT_LINK = (import.meta.env.VITE_STRIPE_PAYMENT_LINK as string) || 'https://buy.stripe.com/test_14A14m234f1o4Iz4Pm6AM00';
 
 export default function Membership() {
   const user = useAuthStore((s) => s.user);
