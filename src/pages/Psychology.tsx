@@ -21,7 +21,6 @@ const IDENTITY_CARDS = [
 export default function Psychology() {
   const trades = useTradeStore((s) => s.trades);
   const patterns = useAnalyticsStore((s) => s.patterns);
-  const identity = useAnalyticsStore((s) => s.identity);
   const generatePatterns = useAnalyticsStore((s) => s.generatePatterns);
 
   const emotionData = useMemo(() => {
@@ -46,6 +45,67 @@ export default function Psychology() {
     if (!best || best.winRate === 0) return 'Log more trades to see emotion-based insights.';
     return `You perform best when ${best.emotion.toLowerCase()} (${best.winRate}% WR) and worst when ${worst.emotion.toLowerCase()} (${worst.winRate}% WR).`;
   }, [emotionData]);
+
+  // ✅ Dynamically calculate Trader Identity match scores based on real trade performance & behaviors!
+  const identityScores = useMemo(() => {
+    if (trades.length === 0) {
+      return {
+        activeIdentity: '-',
+        scores: {
+          'The Sniper': 0,
+          'The Revenge Trader': 0,
+          'The Overthinker': 0,
+          'The FOMO Chaser': 0,
+          'The Disciplined Scalper': 0,
+        }
+      };
+    }
+
+    const total = trades.length;
+    
+    // 1. Sniper Score: High Plan Adherence + Patience
+    const followedPlanCount = trades.filter(t => t.followedPlan === 'yes').length;
+    const planAdherence = (followedPlanCount / total) * 100;
+    const wins = trades.filter(t => t.result === 'WIN').length;
+    const winRate = (wins / total) * 100;
+    const sniperScore = Math.round((planAdherence * 0.6) + (winRate * 0.4));
+
+    // 2. Revenge Trader Score: Frequent "Revenge Trade" mistakes
+    const revengeMistakes = trades.filter(t => t.mistakeTag === 'Revenge Trade').length;
+    const revengeScore = Math.round(Math.min((revengeMistakes / Math.max(1, total)) * 100 * 3, 100));
+
+    // 3. Overthinker Score: Anxious before / after
+    const anxiousTrades = trades.filter(t => t.emotionBefore === 'Anxious' || t.emotionAfter === 'Anxious').length;
+    const overthinkerScore = Math.round(Math.min((anxiousTrades / total) * 100 * 1.5, 100));
+
+    // 4. FOMO Chaser Score: FOMO / Impulsive Entry mistakes
+    const fomoMistakes = trades.filter(t => t.mistakeTag === 'FOMO' || t.mistakeTag === 'Impulsive Entry').length;
+    const fomoScore = Math.round(Math.min((fomoMistakes / Math.max(1, total)) * 100 * 3, 100));
+
+    // 5. Disciplined Scalper Score: Plan Adherence + High Volume (scaled by total trades)
+    const volumeFactor = Math.min((total / 15) * 100, 100); // 15+ trades is active scalper range
+    const scalperScore = Math.round((planAdherence * 0.5) + (volumeFactor * 0.5));
+
+    const scores = {
+      'The Sniper': sniperScore,
+      'The Revenge Trader': revengeScore,
+      'The Overthinker': overthinkerScore,
+      'The FOMO Chaser': fomoScore,
+      'The Disciplined Scalper': scalperScore,
+    };
+
+    // Determine highest scoring active identity (must be at least 15% to be prominent)
+    let activeIdentity = '-';
+    let maxScore = 14;
+    Object.entries(scores).forEach(([name, score]) => {
+      if (score > maxScore) {
+        maxScore = score;
+        activeIdentity = name;
+      }
+    });
+
+    return { activeIdentity, scores };
+  }, [trades]);
 
   return (
     <div className="space-y-6">
@@ -92,8 +152,8 @@ export default function Psychology() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-4">
             {IDENTITY_CARDS.map((idCard) => {
               const Icon = idCard.icon;
-              const isActive = identity?.identity === idCard.name;
-              const matchScore = isActive ? identity?.matchScore || 0 : Math.floor(Math.random() * 40) + 10;
+              const score = identityScores.scores[idCard.name as keyof typeof identityScores.scores] || 0;
+              const isActive = identityScores.activeIdentity === idCard.name && score > 0;
               return (
                 <div
                   key={idCard.name}
@@ -107,10 +167,10 @@ export default function Psychology() {
                   {isActive && <span className="font-micro px-2 py-0.5 rounded mb-2 inline-block" style={{ background: 'rgba(0, 229, 160, 0.15)', color: '#00e5a0' }}>Current Identity</span>}
                   <Icon className="w-10 h-10 mx-auto" style={{ color: idCard.color }} />
                   <h3 className="font-card-title mt-3" style={{ color: 'var(--text)' }}>{idCard.name}</h3>
-                  <p className="font-data-md mt-2" style={{ color: 'var(--accent2)' }}>{matchScore}%</p>
+                  <p className="font-data-md mt-2" style={{ color: 'var(--accent2)' }}>{score}%</p>
                   <p className="text-[12px] mt-2 leading-relaxed" style={{ color: 'var(--text2)' }}>{idCard.desc}</p>
                   <div className="h-1 rounded-full mt-3 overflow-hidden" style={{ background: 'var(--border)' }}>
-                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${matchScore}%`, background: 'var(--accent2)' }} />
+                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${score}%`, background: 'var(--accent2)' }} />
                   </div>
                 </div>
               );
