@@ -212,6 +212,66 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Live Economic News (No news / Weekends) - Calm Trading Bunny */}
+      {todayHighImpactEvents.length === 0 && (
+        <>
+          <style dangerouslySetInnerHTML={{__html: `
+            @keyframes floatBunny {
+              0%, 100% { transform: translateY(0px) rotate(0deg); }
+              50% { transform: translateY(-8px) rotate(1.5deg); }
+            }
+            .animate-float-bunny {
+              animation: floatBunny 4s ease-in-out infinite;
+            }
+          `}} />
+          <div 
+            className="p-5 rounded-xl border flex flex-col lg:flex-row items-center justify-between gap-5 transition-all duration-300 hover:scale-[1.01]"
+            style={{ 
+              background: 'rgba(0, 229, 160, 0.02)', 
+              border: '1px solid rgba(0, 229, 160, 0.15)',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
+            }}
+          >
+            <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left w-full lg:w-auto">
+              <div className="relative flex-shrink-0">
+                <img 
+                  src="/calm_bunny.png" 
+                  alt="Calm Trading Bunny" 
+                  className="w-20 h-20 object-contain drop-shadow-[0_0_12px_rgba(0,229,160,0.25)] animate-float-bunny"
+                />
+                <span className="absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full bg-[#00e5a0] border-2 border-[#080b0f] animate-pulse" />
+              </div>
+              <div>
+                <h3 className="text-[16px] font-bold text-[#00e5a0] flex items-center justify-center sm:justify-start gap-2">
+                  CLEAR SKIES & PATIENT CALM 🐰
+                </h3>
+                <p className="text-[13px] mt-1.5 leading-relaxed max-w-xl" style={{ color: 'var(--text)' }}>
+                  No high-impact (Red Folder) economic events are scheduled for today. Markets are calm and in standard volatility ranges. Perfect conditions to trade your edge with mechanical discipline!
+                </p>
+                <div className="flex flex-wrap justify-center sm:justify-start gap-2.5 mt-3">
+                  <span className="px-2.5 py-0.5 rounded text-[11px] font-semibold" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text2)' }}>
+                    🟢 Clean Trading Day
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded text-[11px] font-semibold" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text2)' }}>
+                    🐰 Boredom is Edge Mode Active
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div 
+              className="px-4 py-3 rounded-lg max-w-sm w-full lg:w-auto" 
+              style={{ background: 'rgba(0, 229, 160, 0.05)', border: '1px solid rgba(0, 229, 160, 0.1)' }}
+            >
+              <h4 className="text-[12px] font-bold text-[#00e5a0] uppercase tracking-wider mb-1">🐰 CALM TRADER TIP</h4>
+              <p className="text-[12px] leading-relaxed text-left" style={{ color: 'var(--text2)' }}>
+                Boredom is a trader's superpower. Do not manufacture setups out of impatience. Only trade what your plan allows!
+              </p>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
         <StatCard label="WIN RATE" value={stats.winRate} suffix="%" color="#00e5a0" trend={+5} />
