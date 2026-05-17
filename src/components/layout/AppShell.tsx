@@ -162,8 +162,8 @@ export default function AppShell() {
               <Menu className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="font-section text-[18px] lg:text-[20px]" style={{ color: 'var(--text)' }}>
-                Good {greeting}, {user?.username} <span className="text-[16px]">⚡</span>
+              <h1 className="font-section text-[14px] sm:text-[18px] lg:text-[20px] truncate max-w-[150px] xs:max-w-[200px] sm:max-w-none" style={{ color: 'var(--text)' }} title={`Good ${greeting}, ${user?.username}`}>
+                Good {greeting}, {user?.username} <span className="text-[12px] sm:text-[16px]">⚡</span>
               </h1>
             </div>
           </div>

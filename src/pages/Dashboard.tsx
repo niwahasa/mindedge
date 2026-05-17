@@ -68,8 +68,8 @@ export default function Dashboard() {
 
       {/* Welcome & Profile Upload Banner */}
       <Card accentColor="var(--accent2)">
-        <div className="p-6 flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-5 w-full sm:w-auto">
+        <div className="p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex flex-col sm:flex-row items-center text-center sm:text-left gap-5 w-full md:w-auto">
             {/* Profile Photo Upload Widget */}
             <div className="relative group flex-shrink-0">
               <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-accent transition-transform duration-300 group-hover:scale-105" style={{ background: 'var(--surface2)' }}>
@@ -110,7 +110,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 self-start sm:self-auto">
+          <div className="flex items-center gap-3 self-center md:self-auto">
             <span className="font-micro" style={{ color: 'var(--text3)' }}>ACCOUNT LEVEL</span>
             <Badge variant={user?.plan === 'premium' ? 'good' : 'neutral'}>
               {user?.plan?.toUpperCase() || 'FREE'}
@@ -120,7 +120,7 @@ export default function Dashboard() {
       </Card>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
         <StatCard label="WIN RATE" value={stats.winRate} suffix="%" color="#00e5a0" trend={+5} />
         <StatCard label="AVG R:R" value={stats.avgRr} color="#00b8ff" trend={+0.3} />
         <StatCard label="DISCIPLINE" value={discipline.score} color="#ffd166" trend={-2} />
