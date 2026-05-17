@@ -109,60 +109,81 @@ export const useAuthStore = create<AuthState>()(
 
       initializeAuth: () => {
         supabase.auth.onAuthStateChange(async (event, session) => {
+          console.log('[MindEdge] Auth State Changed:', event, session?.user?.email);
+          
           if (event === 'SIGNED_IN' && session?.user) {
-            const { user: supaUser } = session;
-            
-            // Check if user exists in our SQL DB
-            let { data: sqlUser } = await supabase
-              .from('users')
-              .select('*')
-              .eq('email', supaUser.email)
-              .single();
+            try {
+              const { user: supaUser } = session;
+              
+              // Check if user exists in our SQL DB
+              let { data: sqlUser, error: selectError } = await supabase
+                .from('users')
+                .select('*')
+                .eq('email', supaUser.email)
+                .single();
 
-            const now = new Date().toISOString();
+              if (selectError && selectError.code !== 'PGRST116') {
+                console.error('[MindEdge] Error checking SQL user:', selectError);
+              }
 
-            if (!sqlUser) {
-              // Create user in SQL if they don't exist
-              const newUser = {
-                id: supaUser.id,
-                email: supaUser.email,
-                username: supaUser.user_metadata?.full_name || supaUser.email?.split('@')[0] || 'Trader',
-                plan: 'free',
-                streak: 1,
-                created_at: now
+              const now = new Date().toISOString();
+
+              if (!sqlUser) {
+                console.log('[MindEdge] User not found in SQL, creating new user...');
+                // Create user in SQL if they don't exist
+                const newUser = {
+                  id: supaUser.id,
+                  email: supaUser.email,
+                  username: supaUser.user_metadata?.full_name || supaUser.email?.split('@')[0] || 'Trader',
+                  plan: 'free',
+                  streak: 1,
+                  created_at: now
+                };
+                
+                const { error: insertError } = await supabase.from('users').insert([newUser]);
+                
+                if (insertError) {
+                  console.error('[MindEdge] Failed to insert SQL user. RLS issue?', insertError);
+                  // Fallback: we still want to log them in to the app locally even if DB fails
+                  sqlUser = newUser; 
+                } else {
+                  console.log('[MindEdge] SQL user created successfully.');
+                  sqlUser = newUser;
+                }
+
+                const checklistItems = defaultChecklist.map(item => ({ ...item, userId: supaUser.id }));
+                const rules = { ...defaultRules, userId: supaUser.id, id: generateId() };
+                
+                useTradeStore.getState().setTrades([]);
+                useAnalyticsStore.setState({ 
+                  checklistItems, 
+                  sessionRules: rules,
+                  patterns: [],
+                  disciplineScores: [],
+                  coachMessages: [],
+                  checklistCompletions: {}
+                });
+              }
+
+              const user: User = {
+                id: sqlUser.id || supaUser.id,
+                email: sqlUser.email || supaUser.email,
+                username: sqlUser.username || supaUser.user_metadata?.full_name || 'Trader',
+                plan: (sqlUser.plan as 'free' | 'premium') || 'free',
+                traderIdentity: null,
+                journalStreak: sqlUser.streak ?? 1,
+                longestStreak: sqlUser.streak ?? 1,
+                lastActive: now,
+                createdAt: sqlUser.created_at || now,
               };
-              
-              await supabase.from('users').insert([newUser]);
-              sqlUser = newUser;
 
-              const checklistItems = defaultChecklist.map(item => ({ ...item, userId: supaUser.id }));
-              const rules = { ...defaultRules, userId: supaUser.id, id: generateId() };
-              
-              useTradeStore.getState().setTrades([]);
-              useAnalyticsStore.setState({ 
-                checklistItems, 
-                sessionRules: rules,
-                patterns: [],
-                disciplineScores: [],
-                coachMessages: [],
-                checklistCompletions: {}
-              });
+              console.log('[MindEdge] User successfully authenticated and state updated.');
+              set({ user, isAuthenticated: true });
+            } catch (err) {
+              console.error('[MindEdge] Unexpected error during initializeAuth:', err);
             }
-
-            const user: User = {
-              id: sqlUser.id,
-              email: sqlUser.email,
-              username: sqlUser.username,
-              plan: (sqlUser.plan as 'free' | 'premium') || 'free',
-              traderIdentity: null,
-              journalStreak: sqlUser.streak ?? 1,
-              longestStreak: sqlUser.streak ?? 1,
-              lastActive: now,
-              createdAt: sqlUser.created_at || now,
-            };
-
-            set({ user, isAuthenticated: true });
           } else if (event === 'SIGNED_OUT') {
+            console.log('[MindEdge] User signed out.');
             set({ user: null, isAuthenticated: false });
           }
         });
