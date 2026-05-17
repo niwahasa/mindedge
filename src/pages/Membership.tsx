@@ -1,27 +1,52 @@
-import { useState } from 'react';
-import { Check, Sparkles, Zap, ShieldCheck, BarChart3, Ticket } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Check, Sparkles, Zap, ShieldCheck, BarChart3, Ticket, Crown } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/lib/supabase';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import { toast } from 'sonner';
 
+const STRIPE_PAYMENT_LINK = import.meta.env.VITE_STRIPE_PAYMENT_LINK as string;
+
 export default function Membership() {
   const user = useAuthStore((s) => s.user);
   const updateProfile = useAuthStore((s) => s.updateProfile);
   const [promoCode, setPromoCode] = useState('');
   const [loading, setLoading] = useState(false);
+  const [upgrading, setUpgrading] = useState(false);
 
-  const handleUpgrade = async () => {
-    // In a real production app, this would redirect to Stripe Checkout
-    // Example: window.location.href = 'https://buy.stripe.com/abc123...';
-    
-    toast.info('Redirecting to secure checkout...');
-    setTimeout(() => {
-      alert('In this demo, please use a Promo Code (e.g., MINDEDGE_FREE) to upgrade immediately.');
-    }, 1000);
+  // ✅ Detect redirect back from Stripe after successful payment
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('success') === 'true' && user && user.plan !== 'premium') {
+      handleStripeSuccess();
+    }
+  }, [user]);
+
+  const handleStripeSuccess = async () => {
+    if (!user) return;
+    setUpgrading(true);
+    try {
+      await updateProfile({ plan: 'premium' });
+      toast.success('🎉 Welcome to MindEdge Premium! All features are now unlocked.');
+      // Clean the URL so it doesn't trigger again on refresh
+      window.history.replaceState({}, document.title, '/membership');
+    } catch (err) {
+      toast.error('Payment received but upgrade failed. Please contact support.');
+    } finally {
+      setUpgrading(false);
+    }
   };
 
+  const handleUpgrade = () => {
+    if (!STRIPE_PAYMENT_LINK) {
+      toast.error('Payment link not configured. Please contact support.');
+      return;
+    }
+    // Append user email so Stripe pre-fills the checkout form
+    const emailParam = user?.email ? `?prefilled_email=${encodeURIComponent(user.email)}` : '';
+    window.location.href = `${STRIPE_PAYMENT_LINK}${emailParam}`;
+  };
   const handleApplyPromo = async () => {
     if (!promoCode.trim() || !user) return;
     setLoading(true);
@@ -171,17 +196,28 @@ export default function Membership() {
 
               <button
                 onClick={plan.premium && !plan.current ? handleUpgrade : undefined}
-                disabled={plan.current}
+                disabled={plan.current || (plan.premium && upgrading)}
                 className={`w-full py-4 rounded-xl font-bold text-[16px] transition-all flex items-center justify-center gap-2 ${
                   plan.current 
                     ? 'bg-surface2 text-text3 cursor-default' 
                     : plan.premium 
-                      ? 'bg-accent text-bg hover:brightness-110 active:scale-[0.98]' 
+                      ? 'bg-accent text-bg hover:brightness-110 active:scale-[0.98] disabled:opacity-70' 
                       : 'bg-surface2 text-text hover:bg-border'
                 }`}
               >
-                {plan.premium && !plan.current && <Sparkles className="w-5 h-5" />}
-                {plan.cta}
+                {plan.premium && upgrading ? (
+                  <>
+                    <Crown className="w-5 h-5 animate-pulse" />
+                    Activating Premium...
+                  </>
+                ) : plan.premium && !plan.current ? (
+                  <>
+                    <Sparkles className="w-5 h-5" />
+                    {plan.cta}
+                  </>
+                ) : (
+                  plan.cta
+                )}
               </button>
             </div>
           </Card>
