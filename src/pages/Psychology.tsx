@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Brain, Crosshair, ZapOff, TrendingUp, Target, RefreshCw, Sparkles } from 'lucide-react';
 import { useTradeStore } from '@/stores/tradeStore';
 import { useAnalyticsStore } from '@/stores/analyticsStore';
+import { toast } from 'sonner';
 import { groupByEmotion, groupByMistake } from '@/utils/helpers';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, PieChart, Pie, Cell } from 'recharts';
 import Card from '@/components/ui/Card';
@@ -22,6 +23,29 @@ export default function Psychology() {
   const trades = useTradeStore((s) => s.trades);
   const patterns = useAnalyticsStore((s) => s.patterns);
   const generatePatterns = useAnalyticsStore((s) => s.generatePatterns);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefreshPatterns = async () => {
+    setRefreshing(true);
+    try {
+      const res = await generatePatterns();
+      if (res?.success) {
+        toast.success('Successfully analyzed and refreshed behavioral patterns!');
+      } else if (res?.error === 'GEMINI_KEY_MISSING') {
+        toast.error('Gemini API Key is missing. Configure it under Settings > Data Export.');
+      } else if (res?.error === 'NEED_MORE_TRADES') {
+        toast.error('You need at least 5 logged trades to run AI pattern analysis.');
+      } else if (res?.error === 'RATE_LIMITED') {
+        toast.error('Analysis is rate-limited. Please wait 1 minute before trying again.');
+      } else {
+        toast.error(`Analysis failed: ${res?.error || 'Unknown error'}`);
+      }
+    } catch (err: any) {
+      toast.error(`Error: ${err.message || 'Failed to refresh patterns'}`);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const emotionData = useMemo(() => {
     const groups = groupByEmotion(trades);
@@ -190,13 +214,15 @@ export default function Psychology() {
                 <span className="font-micro" style={{ color: 'var(--accent2)' }}>AI</span>
               </div>
               <button
-                onClick={() => generatePatterns()}
-                className="flex items-center gap-1.5 text-[12px] px-3 py-1.5 rounded-lg transition-colors"
+                onClick={handleRefreshPatterns}
+                disabled={refreshing}
+                className="flex items-center gap-1.5 text-[12px] px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
                 style={{ color: 'var(--text2)' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface2)'; e.currentTarget.style.color = 'var(--text)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text2)'; }}
+                onMouseEnter={(e) => { if (!refreshing) { e.currentTarget.style.background = 'var(--surface2)'; e.currentTarget.style.color = 'var(--text)'; } }}
+                onMouseLeave={(e) => { if (!refreshing) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text2)'; } }}
               >
-                <RefreshCw className="w-3.5 h-3.5" /> Refresh Analysis
+                <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} /> 
+                {refreshing ? 'Analyzing...' : 'Refresh Analysis'}
               </button>
             </div>
           </div>

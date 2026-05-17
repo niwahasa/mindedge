@@ -17,7 +17,7 @@ interface AnalyticsState {
   identity: TraderIdentity | null;
   patternLastGenerated: string;
   recalculateStats: () => void;
-  generatePatterns: () => Promise<void>;
+  generatePatterns: () => Promise<{ success: boolean; error?: string }>;
   calculateDisciplineScore: () => void;
   updateRules: (rules: Partial<SessionRules>) => void;
   addChecklistItem: (text: string) => void;
@@ -62,14 +62,16 @@ export const useAnalyticsStore = create<AnalyticsState>()(
 
       generatePatterns: async () => {
         const key = getGeminiKey();
-        if (!key) return;
+        if (!key) return { success: false, error: 'GEMINI_KEY_MISSING' };
+
+        const trades = useTradeStore.getState().trades;
+        if (trades.length < 5) return { success: false, error: 'NEED_MORE_TRADES' };
 
         const lastGen = get().patternLastGenerated;
         const now = Date.now();
-        if (lastGen && now - new Date(lastGen).getTime() < 3600000) return; // 1 hour rate limit
-
-        const trades = useTradeStore.getState().trades;
-        if (trades.length < 5) return;
+        if (lastGen && now - new Date(lastGen).getTime() < 60000) { // 1 min rate limit for better UX
+          return { success: false, error: 'RATE_LIMITED' };
+        }
 
         const recentTrades = trades.slice(0, 50).map(t => ({
           pair: t.pair, direction: t.direction, setup: t.setup, session: t.session,
@@ -106,6 +108,9 @@ Rules:
               generationConfig: { temperature: 0.3, maxOutputTokens: 1000 },
             }),
           });
+          if (!res.ok) {
+            return { success: false, error: `API_ERROR: ${res.statusText}` };
+          }
           const data = await res.json();
           const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
           const clean = text.replace(/```json|```/g, '').trim();
@@ -124,9 +129,12 @@ Rules:
               generatedAt: new Date().toISOString(),
             }));
             set({ patterns: [...newPatterns, ...get().patterns].slice(0, 20), patternLastGenerated: new Date().toISOString() });
+            return { success: true };
+          } else {
+            return { success: false, error: 'INVALID_API_RESPONSE' };
           }
-        } catch {
-          // Silently fail - keep existing patterns
+        } catch (err: any) {
+          return { success: false, error: err.message || 'UNEXPECTED_ERROR' };
         }
       },
 
