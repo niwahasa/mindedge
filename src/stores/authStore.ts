@@ -11,6 +11,7 @@ interface AuthState {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   loginWithGoogle: () => Promise<void>;
+  initializeAuth: () => void;
   register: (email: string, username: string, password: string) => Promise<boolean>;
   logout: () => void;
   updateProfile: (data: Partial<User>) => Promise<void>;
@@ -104,6 +105,67 @@ export const useAuthStore = create<AuthState>()(
         } catch (err) {
           console.error('[MindEdge] Google Login Exception:', err);
         }
+      },
+
+      initializeAuth: () => {
+        supabase.auth.onAuthStateChange(async (event, session) => {
+          if (event === 'SIGNED_IN' && session?.user) {
+            const { user: supaUser } = session;
+            
+            // Check if user exists in our SQL DB
+            let { data: sqlUser } = await supabase
+              .from('users')
+              .select('*')
+              .eq('email', supaUser.email)
+              .single();
+
+            const now = new Date().toISOString();
+
+            if (!sqlUser) {
+              // Create user in SQL if they don't exist
+              const newUser = {
+                id: supaUser.id,
+                email: supaUser.email,
+                username: supaUser.user_metadata?.full_name || supaUser.email?.split('@')[0] || 'Trader',
+                plan: 'free',
+                streak: 1,
+                created_at: now
+              };
+              
+              await supabase.from('users').insert([newUser]);
+              sqlUser = newUser;
+
+              const checklistItems = defaultChecklist.map(item => ({ ...item, userId: supaUser.id }));
+              const rules = { ...defaultRules, userId: supaUser.id, id: generateId() };
+              
+              useTradeStore.getState().setTrades([]);
+              useAnalyticsStore.setState({ 
+                checklistItems, 
+                sessionRules: rules,
+                patterns: [],
+                disciplineScores: [],
+                coachMessages: [],
+                checklistCompletions: {}
+              });
+            }
+
+            const user: User = {
+              id: sqlUser.id,
+              email: sqlUser.email,
+              username: sqlUser.username,
+              plan: (sqlUser.plan as 'free' | 'premium') || 'free',
+              traderIdentity: null,
+              journalStreak: sqlUser.streak ?? 1,
+              longestStreak: sqlUser.streak ?? 1,
+              lastActive: now,
+              createdAt: sqlUser.created_at || now,
+            };
+
+            set({ user, isAuthenticated: true });
+          } else if (event === 'SIGNED_OUT') {
+            set({ user: null, isAuthenticated: false });
+          }
+        });
       },
 
       register: async (email, username, password) => {

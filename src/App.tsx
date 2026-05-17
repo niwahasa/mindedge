@@ -30,8 +30,13 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
 function AppInitializer({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((s) => s.user);
   const updateStreak = useAuthStore((s) => s.updateStreak);
+  const initializeAuth = useAuthStore((s) => s.initializeAuth);
 
   const fetchTrades = useTradeStore((s) => s.fetchTrades);
+
+  useEffect(() => {
+    initializeAuth();
+  }, [initializeAuth]);
 
   useEffect(() => {
     if (user) {
