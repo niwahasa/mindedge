@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User } from '@/types';
-import { generateId, generateSeedTrades } from '@/utils/helpers';
+import { generateId } from '@/utils/helpers';
 import { useTradeStore } from './tradeStore';
 import { useAnalyticsStore } from './analyticsStore';
 import { supabase } from '@/lib/supabase';
@@ -10,6 +10,7 @@ interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<boolean>;
+  loginWithGoogle: () => Promise<void>;
   register: (email: string, username: string, password: string) => Promise<boolean>;
   logout: () => void;
   updateProfile: (data: Partial<User>) => Promise<void>;
@@ -89,6 +90,22 @@ export const useAuthStore = create<AuthState>()(
         return false;
       },
 
+      loginWithGoogle: async () => {
+        try {
+          const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+              redirectTo: window.location.origin,
+            },
+          });
+          if (error) {
+            console.error('[MindEdge] Google Login Error:', error.message);
+          }
+        } catch (err) {
+          console.error('[MindEdge] Google Login Exception:', err);
+        }
+      },
+
       register: async (email, username, password) => {
         const id = generateId();
         const now = new Date().toISOString();
@@ -122,12 +139,11 @@ export const useAuthStore = create<AuthState>()(
         // Also store in a registry for simple password login (demo style)
         await supabase.from('users_registry').insert([{ email, password, user_id: id }]);
 
-        const seedTrades = generateSeedTrades(id);
         const checklistItems = defaultChecklist.map(item => ({ ...item, userId: id }));
         const rules = { ...defaultRules, userId: id, id: generateId() };
 
         // Initialize other stores
-        useTradeStore.getState().setTrades(seedTrades);
+        useTradeStore.getState().setTrades([]);
         useAnalyticsStore.setState({ 
           checklistItems, 
           sessionRules: rules,
