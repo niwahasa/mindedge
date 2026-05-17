@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react';
-import { TrendingUp, TrendingDown, Sparkles, RefreshCw, Plus, X, Camera } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { TrendingUp, TrendingDown, Sparkles, RefreshCw, Plus, X, Camera, AlertOctagon, Clock } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useTradeStore } from '@/stores/tradeStore';
 import { useAnalyticsStore } from '@/stores/analyticsStore';
+import { useNewsStore } from '@/stores/newsStore';
 import { calculateStats, groupBySession, getHeatmapData } from '@/utils/helpers';
 import { useCountUp } from '@/hooks';
 import Card from '@/components/ui/Card';
@@ -24,6 +25,41 @@ export default function Dashboard() {
   const addChecklistItem = useAnalyticsStore((s) => s.addChecklistItem);
   const generatePatterns = useAnalyticsStore((s) => s.generatePatterns);
   const getAlerts = useAnalyticsStore((s) => s.getAlerts);
+
+  const fetchCalendar = useNewsStore((s) => s.fetchCalendar);
+  const { events } = useNewsStore();
+
+  useEffect(() => {
+    fetchCalendar();
+  }, [fetchCalendar]);
+
+  const todayHighImpactEvents = useMemo(() => {
+    const isToday = (date: Date) => {
+      const today = new Date();
+      return date.getDate() === today.getDate() &&
+             date.getMonth() === today.getMonth() &&
+             date.getFullYear() === today.getFullYear();
+    };
+
+    return (events || []).filter(e => {
+      if (e.impact !== 'High') return false;
+      try {
+        const eventDate = new Date(e.date);
+        return isToday(eventDate);
+      } catch {
+        return false;
+      }
+    });
+  }, [events]);
+
+  const formatEventTime = (isoString: string) => {
+    try {
+      const d = new Date(isoString);
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return 'All Day';
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -118,6 +154,63 @@ export default function Dashboard() {
           </div>
         </div>
       </Card>
+
+      {/* Live Economic News (Red Folders) Alert Banner */}
+      {todayHighImpactEvents.length > 0 && (
+        <div 
+          className="p-5 rounded-xl border flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 animate-pulse-border"
+          style={{ 
+            background: 'rgba(255, 74, 107, 0.05)', 
+            border: '1px solid rgba(255, 74, 107, 0.3)',
+            boxShadow: '0 0 15px rgba(255, 74, 107, 0.1)'
+          }}
+        >
+          <div className="flex items-start gap-4">
+            <div 
+              className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ background: 'rgba(255, 74, 107, 0.15)', color: '#ff4a6b' }}
+            >
+              <AlertOctagon className="w-5 h-5 animate-pulse" />
+            </div>
+            <div>
+              <h3 className="font-card-title text-[15px] font-bold text-[#ff4a6b] flex items-center gap-2">
+                RED FOLDER VOLATILITY DETECTED!
+                <span className="w-2 h-2 rounded-full bg-[#ff4a6b] animate-ping" />
+              </h3>
+              <p className="text-[13px] mt-1 leading-relaxed" style={{ color: 'var(--text)' }}>
+                There are <span className="text-[#ff4a6b] font-bold">{todayHighImpactEvents.length} High-Impact economic releases</span> scheduled for today. Expect extreme volatility during these times!
+              </p>
+              <div className="flex flex-wrap gap-2.5 mt-3">
+                {todayHighImpactEvents.map((e, index) => (
+                  <div 
+                    key={index}
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-md text-[12px] font-semibold"
+                    style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}
+                  >
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold text-white bg-[#ff4a6b]">
+                      {e.country}
+                    </span>
+                    <span style={{ color: 'var(--text)' }}>{e.title}</span>
+                    <span className="flex items-center gap-1 font-micro animate-card-enter" style={{ color: 'var(--text3)' }}>
+                      <Clock className="w-3 h-3" /> {formatEventTime(e.date)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          
+          <div 
+            className="px-4 py-3 rounded-lg max-w-sm" 
+            style={{ background: 'rgba(255, 209, 102, 0.08)', border: '1px solid rgba(255, 209, 102, 0.2)' }}
+          >
+            <h4 className="text-[12px] font-bold text-[#ffd166] uppercase tracking-wider mb-1">⚡ Edge discipline tip</h4>
+            <p className="text-[12px] leading-relaxed" style={{ color: 'var(--text2)' }}>
+              Protect your capital! Lower your risk parameters or stay completely flat **30 minutes before and after** these events.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">

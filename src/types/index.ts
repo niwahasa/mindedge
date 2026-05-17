@@ -109,3 +109,12 @@ export interface AlertItem {
   message: string;
   severity: 'danger' | 'warn';
 }
+
+export interface EconomicEvent {
+  title: string;
+  country: string;
+  date: string;
+  impact: 'High' | 'Medium' | 'Low' | 'Holiday' | string;
+  forecast: string;
+  previous: string;
+}
