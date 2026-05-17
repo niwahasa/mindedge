@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User } from '@/types';
+import type { User, SessionRules } from '@/types';
 import { generateId } from '@/utils/helpers';
 import { useTradeStore } from './tradeStore';
 import { useAnalyticsStore } from './analyticsStore';
@@ -27,12 +27,36 @@ const defaultChecklist = [
   { id: generateId(), text: 'Accepted I may not trade today', isDefault: true, position: 4 },
 ];
 
-const defaultRules = {
+const defaultRules: SessionRules = {
   id: generateId(),
+  userId: '',
   maxTradesDay: 3,
   maxLossesDay: 2,
   pauseAfterLosses: 2,
   tradeSessions: ['London Open', 'NY Open'],
+};
+
+const syncAndScopeAnalyticsStore = (userId: string) => {
+  const analytics = useAnalyticsStore.getState();
+  const belongsToCurrentUser = (item: any) => item && item.userId === userId;
+  
+  const filteredPatterns = (analytics.patterns || []).filter(belongsToCurrentUser);
+  const filteredScores = (analytics.disciplineScores || []).filter(belongsToCurrentUser);
+  const filteredMessages = (analytics.coachMessages || []).filter(belongsToCurrentUser);
+  const filteredChecklist = (analytics.checklistItems || []).filter(belongsToCurrentUser);
+  
+  const filteredRules = analytics.sessionRules && analytics.sessionRules.userId === userId
+    ? analytics.sessionRules
+    : { ...defaultRules, userId, id: generateId() };
+    
+  useAnalyticsStore.setState({
+    patterns: filteredPatterns,
+    disciplineScores: filteredScores,
+    coachMessages: filteredMessages,
+    checklistItems: filteredChecklist.length > 0 ? filteredChecklist : defaultChecklist.map(item => ({ ...item, userId })),
+    sessionRules: filteredRules,
+    identity: analytics.identity,
+  });
 };
 
 export const useAuthStore = create<AuthState>()(
@@ -72,6 +96,7 @@ export const useAuthStore = create<AuthState>()(
                 lastActive: now,
                 createdAt: sqlUser.created_at || now,
               };
+              syncAndScopeAnalyticsStore(user.id);
               set({ user, isAuthenticated: true });
               return true;
             }
@@ -177,6 +202,7 @@ export const useAuthStore = create<AuthState>()(
                 createdAt: sqlUser.created_at || now,
               };
 
+              syncAndScopeAnalyticsStore(user.id);
               console.log('[MindEdge] User successfully authenticated and state updated.');
               set({ user, isAuthenticated: true });
             } catch (err) {
@@ -236,6 +262,7 @@ export const useAuthStore = create<AuthState>()(
           checklistCompletions: {}
         });
 
+        syncAndScopeAnalyticsStore(id);
         set({ user, isAuthenticated: true });
         return true;
       },
@@ -247,7 +274,10 @@ export const useAuthStore = create<AuthState>()(
           patterns: [], 
           disciplineScores: [], 
           coachMessages: [], 
-          checklistCompletions: {} 
+          checklistCompletions: {},
+          checklistItems: [],
+          sessionRules: defaultRules,
+          identity: null
         });
       },
 

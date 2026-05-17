@@ -40,7 +40,7 @@ export const useTradeStore = create<TradeState>()(
           return;
         }
 
-        if (data && data.length > 0) {
+        if (data) {
           set({
             trades: data.map((t) => ({
               ...t,
