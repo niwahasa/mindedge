@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { TrendingUp, TrendingDown, Sparkles, RefreshCw, Plus, X } from 'lucide-react';
+import { TrendingUp, TrendingDown, Sparkles, RefreshCw, Plus, X, Camera } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useTradeStore } from '@/stores/tradeStore';
 import { useAnalyticsStore } from '@/stores/analyticsStore';
@@ -9,10 +9,12 @@ import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import ScoreRing from '@/components/ui/ScoreRing';
 import AlertBanner from '@/components/ui/AlertBanner';
+import { toast } from 'sonner';
 import type { Trade } from '@/types';
 
 export default function Dashboard() {
   const user = useAuthStore((s) => s.user);
+  const updateProfile = useAuthStore((s) => s.updateProfile);
   const trades = useTradeStore((s) => s.trades);
   const disciplineScores = useAnalyticsStore((s) => s.disciplineScores);
   const patterns = useAnalyticsStore((s) => s.patterns);
@@ -22,7 +24,28 @@ export default function Dashboard() {
   const addChecklistItem = useAnalyticsStore((s) => s.addChecklistItem);
   const generatePatterns = useAnalyticsStore((s) => s.generatePatterns);
   const getAlerts = useAnalyticsStore((s) => s.getAlerts);
-  // identity detection runs automatically after 10+ trades
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) { // 2MB limit
+      toast.error('Image size must be less than 2MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const base64 = reader.result as string;
+        await updateProfile({ profilePic: base64 });
+        toast.success('Successfully uploaded profile picture!');
+      } catch (err) {
+        toast.error('Failed to upload profile picture.');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const stats = useMemo(() => calculateStats(trades), [trades]);
   const discipline = useMemo(() => {
@@ -42,6 +65,59 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <AlertBanner alerts={alerts} />
+
+      {/* Welcome & Profile Upload Banner */}
+      <Card accentColor="var(--accent2)">
+        <div className="p-6 flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-5 w-full sm:w-auto">
+            {/* Profile Photo Upload Widget */}
+            <div className="relative group flex-shrink-0">
+              <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-accent transition-transform duration-300 group-hover:scale-105" style={{ background: 'var(--surface2)' }}>
+                {user?.profilePic ? (
+                  <img
+                    src={user.profilePic}
+                    alt="Profile Avatar"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div
+                    className="w-full h-full flex items-center justify-center text-[22px] font-bold"
+                    style={{ background: 'rgba(0, 184, 255, 0.15)', color: 'var(--accent2)' }}
+                  >
+                    {user?.username?.slice(0, 2).toUpperCase() || 'ME'}
+                  </div>
+                )}
+              </div>
+              {/* Upload Overlay */}
+              <label className="absolute inset-0 flex flex-col items-center justify-center rounded-full bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                <Camera className="w-4 h-4 text-white mb-0.5" />
+                <span className="text-[9px] text-white font-semibold uppercase tracking-wider">Change</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+              </label>
+            </div>
+
+            <div>
+              <h2 className="text-xl font-display text-text">Welcome back, {user?.username}!</h2>
+              <p className="text-[14px]" style={{ color: 'var(--text2)' }}>
+                Keep your focus sharp. You are currently on a{' '}
+                <span className="text-accent font-semibold">{user?.journalStreak || 1} day streak</span> 🔥
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 self-start sm:self-auto">
+            <span className="font-micro" style={{ color: 'var(--text3)' }}>ACCOUNT LEVEL</span>
+            <Badge variant={user?.plan === 'premium' ? 'good' : 'neutral'}>
+              {user?.plan?.toUpperCase() || 'FREE'}
+            </Badge>
+          </div>
+        </div>
+      </Card>
 
       {/* Stats Row */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-5">

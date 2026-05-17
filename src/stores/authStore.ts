@@ -95,6 +95,7 @@ export const useAuthStore = create<AuthState>()(
                 longestStreak: sqlUser.streak ?? 1,
                 lastActive: now,
                 createdAt: sqlUser.created_at || now,
+                profilePic: get().user?.profilePic || null,
               };
               syncAndScopeAnalyticsStore(user.id);
               set({ user, isAuthenticated: true });
@@ -200,6 +201,7 @@ export const useAuthStore = create<AuthState>()(
                 longestStreak: sqlUser.streak ?? 1,
                 lastActive: now,
                 createdAt: sqlUser.created_at || now,
+                profilePic: supaUser.user_metadata?.avatar_url || get().user?.profilePic || null,
               };
 
               syncAndScopeAnalyticsStore(user.id);
@@ -293,6 +295,17 @@ export const useAuthStore = create<AuthState>()(
           plan: updated.plan,
           streak: updated.journalStreak
         }).eq('id', user.id);
+
+        // If profilePic is updated, sync to Supabase Auth metadata for Google OAuth users
+        if (data.profilePic !== undefined) {
+          try {
+            await supabase.auth.updateUser({
+              data: { avatar_url: data.profilePic }
+            });
+          } catch {
+            // Ignore for password login users who have no active Supabase Auth session
+          }
+        }
       },
 
       updateIdentity: async (identity) => {

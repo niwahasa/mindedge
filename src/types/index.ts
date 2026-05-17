@@ -27,6 +27,7 @@ export interface User {
   journalStreak: number;
   longestStreak: number;
   lastActive: string;
+  profilePic?: string | null;
   createdAt: string;
 }
 

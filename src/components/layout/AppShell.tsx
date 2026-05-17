@@ -86,12 +86,21 @@ export default function AppShell() {
         {/* User Mini Card */}
         <div className="p-3 m-3 rounded-lg" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
           <div className="flex items-center gap-3">
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold flex-shrink-0"
-              style={{ background: 'rgba(0, 184, 255, 0.15)', color: 'var(--accent2)' }}
-            >
-              {user?.username?.slice(0, 2).toUpperCase() || 'ME'}
-            </div>
+            {user?.profilePic ? (
+              <img
+                src={user.profilePic}
+                alt="Profile Avatar"
+                className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                style={{ border: '1px solid var(--border)' }}
+              />
+            ) : (
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold flex-shrink-0"
+                style={{ background: 'rgba(0, 184, 255, 0.15)', color: 'var(--accent2)' }}
+              >
+                {user?.username?.slice(0, 2).toUpperCase() || 'ME'}
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <p className="text-[13px] font-medium truncate" style={{ color: 'var(--text)' }}>{user?.username}</p>
               <div className="flex items-center gap-2">
