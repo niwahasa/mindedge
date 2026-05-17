@@ -111,7 +111,7 @@ export const useAuthStore = create<AuthState>()(
         supabase.auth.onAuthStateChange(async (event, session) => {
           console.log('[MindEdge] Auth State Changed:', event, session?.user?.email);
           
-          if (event === 'SIGNED_IN' && session?.user) {
+          if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
             try {
               const { user: supaUser } = session;
               
